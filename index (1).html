@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Время индикации счётчика</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12263a">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#e8eef4;--card:#fff;--ink:#12263a;--mut:#5b6e82;--line:#c9d5e1;--acc:#1b6fd1;--accink:#fff;--soft:#dbe8f6;--scr:#101c28;--scrink:#ffb43a;--scrmut:#8fa3b6;--err:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1620;--card:#172331;--ink:#e7eef6;--mut:#92a5b8;--line:#2b3b4d;--acc:#5aa2f0;--accink:#08121d;--soft:#1f3248;--scr:#070d14;--err:#ff8a80}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:17px/1.4 "Segoe UI",Roboto,system-ui,sans-serif}
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:16px 16px 0}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.top b{font-size:.95rem;color:var(--mut);font-weight:600}
+.dots{display:flex;gap:8px;margin:10px 0 22px}
+.dots button{flex:1;height:8px;border:0;border-radius:4px;background:var(--line);padding:0;margin:0;cursor:pointer}
+.dots button.on{background:var(--acc)}
+.dots button:disabled{cursor:default}
+section{display:none;flex:1;animation:in .22s ease-out}
+section.show{display:block}
+@keyframes in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){section{animation:none}}
+h1{font-size:1.7rem;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+.lead{margin:0 0 20px;color:var(--mut);font-size:.98rem}
+.card{background:var(--card);border-radius:16px;padding:16px;border:1px solid var(--line)}
+label{display:block;margin:0 0 14px}
+label span{display:block;margin-bottom:5px;color:var(--mut);font-size:.9rem}
+.card label:last-child{margin-bottom:0}
+input[type=text]{width:100%;font:inherit;font-size:1.35rem;font-weight:600;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=text]::placeholder{color:var(--mut);font-weight:400;opacity:.7}
+input:focus-visible,button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g3 label{margin:0}
+.g3 input{font-size:1.1rem;padding:11px 10px}
+.tog{display:flex;align-items:center;gap:12px;margin:16px 2px 0;font-size:.98rem;cursor:pointer}
+.tog input{width:22px;height:22px;accent-color:var(--acc);margin:0}
+.note{margin:12px 2px 0;color:var(--mut);font-size:.92rem}
+.note b{color:var(--ink)}
+.err{color:var(--err);font-size:.92rem;min-height:1.3em;margin:12px 2px 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chips button{width:auto;margin:0;padding:7px 14px;border-radius:20px;background:var(--soft);color:var(--ink);border:0;font-size:.95rem}
+.foot{position:sticky;bottom:0;display:flex;gap:10px;padding:14px 0 calc(14px + env(safe-area-inset-bottom,0px));margin-top:18px;background:linear-gradient(to top,var(--bg) 70%,transparent)}
+.foot button{flex:1;padding:15px;font:inherit;font-weight:600;border-radius:14px;border:0;cursor:pointer}
+#back{background:var(--soft);color:var(--ink);flex:0 0 32%}
+#next{background:var(--acc);color:var(--accink)}
+.scr{background:var(--scr);border-radius:16px;padding:16px 18px;margin-bottom:12px;border:3px solid var(--line)}
+.scr small{display:block;color:var(--scrmut);font-size:.85rem}
+.scr output{display:block;color:var(--scrink);font:600 2.5rem/1.15 "Courier New",ui-monospace,monospace;word-break:break-all;font-variant-numeric:tabular-nums}
+.scr .sub{color:var(--scrink);opacity:.75;font:1rem "Courier New",monospace;min-height:1.3em}
+.sum{list-style:none;margin:0;padding:0}
+.sum li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.sum li:last-child{border:0}
+.sum em{font-style:normal;color:var(--mut);font-size:.92rem}
+.sum button{all:unset;cursor:pointer;color:var(--acc);font-weight:600;font-size:.92rem;padding:2px 4px;border-radius:6px}
+.sum button:focus-visible{outline:3px solid var(--acc)}
+h2{font-size:1.15rem;margin:24px 0 10px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><b id="stepname">Шаг 1 из 5</b></div>
+<div class="dots" id="dots"></div>
+
+<section id="s0">
+<h1>Постоянная счётчика</h1>
+<p class="lead">Передаточное число ПУ указано на щитке счётчика.</p>
+<div class="card">
+<label><span>A, имп/кВт·ч</span><input type="text" id="a" inputmode="decimal" placeholder="например 5000"></label>
+<div class="chips" id="achips"></div>
+<p class="note" id="amodel">Меркурий: нажмите значение или введите своё. Сверьте с щитком счётчика.</p>
+</div>
+<p class="err" id="e0"></p>
+<label class="tog"><input type="checkbox" id="pm"> Рассчитать мощность по времени импульса</label>
+<div id="pw" hidden>
+<div class="card"><label><span>Время индикации tимп, с</span><input type="text" id="t0" inputmode="decimal" placeholder="например 12,5"></label></div>
+<div class="scr" style="margin-top:12px" aria-live="polite"><small>Мощность на ПУ</small><output id="p0">—</output><div class="sub" id="pk0"></div></div>
+<p class="note" id="pn0"></p>
+</div>
+</section>
+
+<section id="s1">
+<h1>Напряжение</h1>
+<p class="lead">Введите среднее напряжение или напряжения по фазам.</p>
+<div class="card">
+<label id="ul"><span>Uср, В</span><input type="text" id="u" inputmode="decimal" placeholder="например 230"></label>
+<div id="u3" hidden class="g3">
+<label><span>Ua, В</span><input type="text" id="u1" inputmode="decimal" placeholder="230"></label>
+<label><span>Ub, В</span><input type="text" id="u2" inputmode="decimal" placeholder="230"></label>
+<label><span>Uc, В</span><input type="text" id="u3i" inputmode="decimal" placeholder="230"></label>
+</div>
+<label class="tog"><input type="checkbox" id="um"> Ввести по трём фазам</label>
+<p class="note" id="uavg" hidden></p>
+</div>
+<p class="err" id="e1"></p>
+</section>
+
+<section id="s2">
+<h1>Токи по фазам</h1>
+<p class="lead">Пустое поле считается нулём. Нужен хотя бы один ток.</p>
+<div class="card">
+<div class="g3">
+<label><span>Ia, А</span><input type="text" id="i1" inputmode="decimal" placeholder="5"></label>
+<label><span>Ib, А</span><input type="text" id="i2" inputmode="decimal" placeholder="5"></label>
+<label><span>Ic, А</span><input type="text" id="i3" inputmode="decimal" placeholder="5"></label>
+</div>
+<p class="note" id="isum">ΣI = <b>0 А</b></p>
+</div>
+<p class="err" id="e2"></p>
+</section>
+
+<section id="s3">
+<h1>Трансформация и cos φ</h1>
+<p class="lead">По умолчанию cos φ равен 1.</p>
+<div class="card">
+<label><span>Коэффициент трансформации Ктр</span><input type="text" id="k" inputmode="decimal" placeholder="например 40"></label>
+<label id="cl"><span>cos φ</span><input type="text" id="c" inputmode="decimal" value="1"></label>
+<div id="c3" hidden class="g3">
+<label><span>cos φa</span><input type="text" id="c1" inputmode="decimal" value="1"></label>
+<label><span>cos φb</span><input type="text" id="c2" inputmode="decimal" value="1"></label>
+<label><span>cos φc</span><input type="text" id="c3i" inputmode="decimal" value="1"></label>
+</div>
+<label class="tog"><input type="checkbox" id="cm"> Задать cos φ по трём фазам</label>
+<label class="tog"><input type="checkbox" id="cang"> Вводить углом φ в градусах</label>
+<p class="note" id="cavg" hidden></p>
+</div>
+<p class="err" id="e3"></p>
+</section>
+
+<section id="s4">
+<h1>Результат</h1>
+<p class="lead">t = 3 600 000 · Ктр · cos φ / (ΣI · Uср · A)</p>
+<div class="scr" aria-live="polite"><small>Время индикации tимп</small><output id="r">—</output><div class="sub" id="rs"></div></div>
+<div class="card"><ul class="sum" id="sumlist"></ul></div>
+<h2>Векторная диаграмма</h2>
+<div class="card"><svg id="vd" viewBox="-135 -135 270 270" role="img" aria-label="Векторная диаграмма напряжений и токов" style="width:100%;height:auto;max-height:340px;display:block"></svg><p class="note" id="vdn"></p></div>
+<div id="pw5" hidden><h2>Мощность на ПУ по tимп</h2>
+<div class="card"><label><span>Время индикации tимп, с</span><input type="text" id="t" inputmode="decimal" placeholder="например 12,5"></label></div>
+<div class="scr" style="margin-top:12px" aria-live="polite"><small>Мощность на ПУ</small><output id="p">—</output><div class="sub" id="pk"></div></div>
+<p class="note">P = 3 600 000 · Ктр · cos φ / (tимп · A)</p></div>
+</section>
+
+<div class="foot"><button id="back" type="button">Назад</button><button id="next" type="button">Далее</button></div>
+</div>
+<script>
+(function(){
+var $=function(x){return document.getElementById(x)};
+var AM0="Меркурий: нажмите значение или введите своё. Сверьте с щитком счётчика.",N=5,step=0,reach=0,names=["Постоянная","Напряжение","Токи","Ктр и cos φ","Результат"];
+function num(v){v=String(v).replace(",",".").trim();return v===""?NaN:Number(v)}
+function fmt(x,d){return x.toLocaleString("ru-RU",{maximumFractionDigits:d==null?3:d})}
+var all=["a","u","u1","u2","u3i","i1","i2","i3","k","c","c1","c2","c3i","t","t0"];
+
+function getA(){var a=num($("a").value);return a>0?a:NaN}
+function getU(){
+ if($("um").checked){var v=[$("u1"),$("u2"),$("u3i")].map(function(x){return num(x.value)});
+  if(!v.every(function(x){return x>0}))return NaN;return (v[0]+v[1]+v[2])/3}
+ var u=num($("u").value);return u>0?u:NaN}
+function getI(){var v=[$("i1"),$("i2"),$("i3")].map(function(x){var n=num(x.value);return isNaN(n)?0:n});
+ if(v.some(function(x){return x<0}))return NaN;var s=v[0]+v[1]+v[2];return s>0?s:NaN}
+function okc(x){return x>0&&x<=1}
+function oka(x){return x>=0&&x<90}
+function toCos(x){if($("cang").checked)return oka(x)?Math.cos(x*Math.PI/180):NaN;return okc(x)?x:NaN}
+function cosIds(){return $("cm").checked?["c1","c2","c3i"]:["c"]}
+function cosList(){var v=cosIds().map(function(i){return toCos(num($(i).value))});return v.every(function(x){return !isNaN(x)})?v:null}
+function getC(){var v=cosList();if(!v)return NaN;return v.reduce(function(p,x){return p+x},0)/v.length}
+function cosText(c){var l=cosList();if(!l)return "—";if(l.length===1)return fmt(l[0],4);return l.map(function(x){return fmt(x,4)}).join(" / ")+", ср. "+fmt(c,4)}
+function angText(){return cosIds().map(function(i){return fmt(num($(i).value),2)+"°"}).join(" / ")}
+function convAng(){
+ var toAng=$("cang").checked;
+ ["c","c1","c2","c3i"].forEach(function(i){
+  var v=num($(i).value);if(isNaN(v))return;
+  var r;
+  if(toAng){if(!(v>0&&v<=1))return;r=Math.round(Math.acos(v)*18000/Math.PI)/100}
+  else{if(!(v>=0&&v<90))return;r=Math.round(Math.cos(v*Math.PI/180)*10000)/10000}
+  $(i).value=String(r).replace(".",",");
+ });
+}
+function getK(){var k=num($("k").value);return k>0?k:NaN}
+
+function live(){
+ $("pw").hidden=!$("pm").checked;$("pw5").hidden=!$("pm").checked;
+ $("u3").hidden=!$("um").checked;$("ul").hidden=$("um").checked;
+ $("c3").hidden=!$("cm").checked;$("cl").hidden=$("cm").checked;
+ var ua=$("um").checked?getU():NaN;
+ $("uavg").hidden=!$("um").checked;$("uavg").innerHTML="Uср = <b>"+(isNaN(ua)?"—":fmt(ua)+" В")+"</b>";
+ var cl=cosList(),cm=$("cm").checked,cg=$("cang").checked,ph=["a","b","c"];
+ $("cl").firstElementChild.textContent=cg?"Угол φ, °":"cos φ";
+ var sp=$("c3").querySelectorAll("label span");
+ ph.forEach(function(x,i){sp[i].textContent=cg?"Угол φ"+x+", °":"cos φ"+x});
+ $("s3").querySelector(".lead").textContent=cg?"Угол вводится в градусах, косинус считается автоматически.":"По умолчанию cos φ равен 1.";
+ $("cavg").hidden=!(cm||cg);
+ if(!cl)$("cavg").innerHTML="cos φ = <b>—</b>";
+ else if(cm)$("cavg").innerHTML=cl.map(function(x,i){return "cos φ"+ph[i]+" = <b>"+fmt(x,4)+"</b>"}).join(", ")+". Среднее cos φ = <b>"+fmt(getC(),4)+"</b>";
+ else $("cavg").innerHTML="cos φ = <b>"+fmt(cl[0],4)+"</b>";
+ var s=0;[$("i1"),$("i2"),$("i3")].forEach(function(x){var n=num(x.value);if(!isNaN(n))s+=n});
+ $("isum").innerHTML="ΣI = <b>"+fmt(s)+" А</b>";
+ var ae=document.activeElement;
+ if(ae===$("a"))$("amodel").textContent=AM0;
+ if(ae===$("t0"))$("t").value=$("t0").value;else if(ae===$("t"))$("t0").value=$("t").value;
+ quick();
+ if(step===4)result();
+}
+function quick(){
+ var t=num($("t0").value),a=getA(),k=getK(),c=getC();
+ if(isNaN(k))k=1;if(isNaN(c))c=1;
+ $("p0").textContent="—";$("pk0").textContent="";
+ $("pn0").textContent="Расчёт при Ктр = "+fmt(k)+" и cos φ = "+fmt(c,4)+". Эти значения вводятся на шаге 4.";
+ if(a>0&&t>0){var P=3600000*k*c/(t*a);$("p0").textContent=fmt(P)+" Вт";$("pk0").textContent="= "+fmt(P/1000)+" кВт"}
+}
+function drawVec(){
+ var svg=$("vd"),NS="http://www.w3.org/2000/svg",note=$("vdn");
+ svg.innerHTML="";note.textContent="";
+ var cl=cosList();
+ var u0=num($("u").value);
+ var uv=$("um").checked?["u1","u2","u3i"].map(function(i){return num($(i).value)}):[u0,u0,u0];
+ var iv=["i1","i2","i3"].map(function(i){var n=num($(i).value);return isNaN(n)?0:n});
+ if(!cl||uv.some(function(x){return !(x>0)})){note.textContent="Для диаграммы нужны напряжения и cos φ.";return}
+ var cs=cl.length===1?[cl[0],cl[0],cl[0]]:cl;
+ var phi=cs.map(function(c){return Math.acos(Math.min(1,c))*180/Math.PI});
+ var th=[90,-30,210],col=["#c89400","#2e9e5b","#d23c3c"],nm=["a","b","c"];
+ var Um=Math.max.apply(null,uv),Im=Math.max.apply(null,iv);
+ function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e}
+ function pt(r,deg){var t=deg*Math.PI/180;return [r*Math.cos(t),-r*Math.sin(t)]}
+ function arrow(r,deg,color,w,label,op,dash){
+  var b=pt(r-11,deg),p=pt(r,deg),s=pt(4.5,deg+90),l=pt(r+14,deg);
+  el("line",{x1:0,y1:0,x2:b[0],y2:b[1],stroke:color,"stroke-width":w,"stroke-linecap":dash?"butt":"round","stroke-dasharray":dash||"none",opacity:op});
+  el("polygon",{points:p[0]+","+p[1]+" "+(b[0]+s[0])+","+(b[1]+s[1])+" "+(b[0]-s[0])+","+(b[1]-s[1]),fill:color,opacity:op});
+  var t=el("text",{x:l[0],y:l[1],"text-anchor":"middle","dominant-baseline":"central","font-size":12,"font-weight":600,fill:color});
+  t.textContent=label;
+ }
+ el("circle",{cx:0,cy:0,r:100,style:"fill:none;stroke:var(--line)","stroke-dasharray":"3 4"});
+ el("line",{x1:-112,y1:0,x2:112,y2:0,style:"stroke:var(--line)"});
+ el("line",{x1:0,y1:-112,x2:0,y2:112,style:"stroke:var(--line)"});
+ el("text",{x:8,y:-118,"font-size":10,style:"fill:var(--mut)"}).textContent="0°";
+ for(var r0=0;r0<3;r0++){
+  var q=pt(58,th[r0]),o=pt(13,th[r0]+90);
+  el("line",{x1:0,y1:0,x2:q[0],y2:q[1],stroke:col[r0],"stroke-width":1.2,"stroke-dasharray":"5 4",opacity:0.55});
+  var t0=el("text",{x:q[0]+o[0],y:q[1]+o[1],"text-anchor":"middle","dominant-baseline":"central","font-size":10,fill:col[r0],opacity:0.8});
+  t0.textContent="U"+nm[r0]+"эт";
+ }
+ for(var i=0;i<3;i++){
+  arrow(58*uv[i]/Um,th[i],col[i],1.6,"U"+nm[i],0.6);
+ }
+ for(var j=0;j<3;j++){
+  if(!(iv[j]>0))continue;
+  arrow(Math.max(28,50*iv[j]/Im),th[j]-phi[j],col[j],3.4,"I"+nm[j],1);
+  if(phi[j]>0.5){var a=pt(24,th[j]),b2=pt(24,th[j]-phi[j]);
+   el("path",{d:"M "+a[0]+" "+a[1]+" A 24 24 0 0 1 "+b2[0]+" "+b2[1],fill:"none",stroke:col[j],"stroke-width":1.4})}
+ }
+ var Uph=(uv[0]+uv[1]+uv[2])/3,Uab=Math.sqrt(3)*Uph,u0t="";
+ arrow(100*Uph/Um,th[0]+30,"#3b82f6",2.6,"Uab",1,"7 5");
+ var sa=pt(42,th[0]),sb=pt(42,th[0]+30),st=pt(52,th[0]+15);
+ el("path",{d:"M "+sa[0]+" "+sa[1]+" A 42 42 0 0 0 "+sb[0]+" "+sb[1],fill:"none",stroke:"#3b82f6","stroke-width":1.4});
+ el("text",{x:st[0]-6,y:st[1],"text-anchor":"end","dominant-baseline":"central","font-size":10,fill:"#3b82f6"}).textContent="−30°";
+ u0t="Uab = "+fmt(Uab,1)+" В, слева от Ua, угол −30°. ";
+ note.textContent=u0t+"Ua направлен вверх и принят за 0°. Пунктир: эталонные Ua, Ub, Uc при идеальной симметрии. Тонкие стрелки: напряжения, толстые: токи. Ток отстаёт от напряжения на угол φ (индуктивная нагрузка). "+phi.map(function(p,i){return "φ"+nm[i]+" = "+fmt(p,1)+"°"}).join(", ")+".";
+}
+function result(){
+ var a=getA(),u=getU(),I=getI(),k=getK(),c=getC(),t=num($("t").value);
+ var r=$("r"),rs=$("rs"),p=$("p"),pk=$("pk");
+ r.textContent="—";rs.textContent="";p.textContent="—";pk.textContent="";
+ if(![a,u,I,k,c].some(isNaN)){var tt=3600000*k*c/(I*u*a);r.textContent=fmt(tt)+" с";if(tt>=60)rs.textContent="≈ "+fmt(tt/60)+" мин"}
+ if(![a,k,c].some(isNaN)&&t>0){var P=3600000*k*c/(t*a);p.textContent=fmt(P)+" Вт";pk.textContent="= "+fmt(P/1000)+" кВт"}
+ var rows=[["Постоянная A",isNaN(a)?"—":fmt(a)+" имп/кВт·ч",0],["Напряжение Uср",isNaN(u)?"—":fmt(u)+" В",1],["Сумма токов ΣI",isNaN(I)?"—":fmt(I)+" А",2],["Ктр",isNaN(k)?"—":fmt(k),3],["cos φ",cosText(c),3]];
+ if($("cang").checked)rows.push(["Угол φ",angText(),3]);
+ $("sumlist").innerHTML="";
+ rows.forEach(function(x){var li=document.createElement("li");
+  li.innerHTML="<em></em><span></span>";li.children[0].textContent=x[0];
+  var b=document.createElement("button");b.type="button";b.textContent=x[1]+" · изменить";
+  b.addEventListener("click",function(){go(x[2])});li.children[1].replaceWith(b);$("sumlist").appendChild(li)});
+ drawVec();
+}
+function validate(n){
+ var m="";
+ if(n===0&&isNaN(getA()))m="Введите передаточное число больше нуля.";
+ if(n===1&&isNaN(getU()))m=$("um").checked?"Введите все три напряжения, каждое больше нуля.":"Введите напряжение больше нуля.";
+ if(n===2&&isNaN(getI()))m="Введите хотя бы один ток больше нуля. Отрицательные значения недопустимы.";
+ if(n===3){if(isNaN(getK()))m="Введите коэффициент трансформации больше нуля.";else if(isNaN(getC()))m=$("cang").checked?"Угол φ должен быть от 0° до 90° (90° не включая).":"cos φ должен быть больше 0 и не больше 1."}
+ if(n<4)$("e"+n).textContent=m;
+ return m==="";
+}
+function render(){
+ for(var i=0;i<N;i++)$("s"+i).classList.toggle("show",i===step);
+ $("stepname").textContent="Шаг "+(step+1)+" из "+N+": "+names[step];
+ var d=$("dots");d.innerHTML="";
+ for(var j=0;j<N;j++){var b=document.createElement("button");b.type="button";b.className=j<=step?"on":"";
+  b.setAttribute("aria-label","Шаг "+(j+1)+": "+names[j]);b.disabled=j>reach;
+  (function(j){b.addEventListener("click",function(){go(j)})})(j);d.appendChild(b)}
+ $("back").hidden=step===0;
+ $("next").textContent=step===N-1?"Начать заново":(step===N-2?"Рассчитать":"Далее");
+ if(step===4)result();
+ window.scrollTo(0,0);
+ var f=document.querySelector("#s"+step+" input[type=text]:not([hidden])");
+}
+function go(n){step=n;if(n>reach)reach=n;render()}
+$("next").addEventListener("click",function(){
+ if(step===N-1){all.forEach(function(x){$(x).value=(x==="c"||x==="c1"||x==="c2"||x==="c3i")?"1":""});
+  $("um").checked=false;$("cm").checked=false;$("pm").checked=false;$("cang").checked=false;reach=0;live();go(0);return}
+ if(validate(step))go(step+1);
+});
+$("back").addEventListener("click",function(){if(step>0)go(step-1)});
+document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target.tagName==="INPUT"&&e.target.type==="text"){e.preventDefault();$("next").click()}});
+$("cang").addEventListener("change",convAng);
+all.concat(["um","cm","pm","cang"]).forEach(function(x){$(x).addEventListener("input",live);$(x).addEventListener("change",live)});
+[[500,"Меркурий 230 ART-02"],[1000,"Меркурий 230 ART-01, ART-03"],[1600,"Меркурий 230 AM-01, AM-02"],[3200,"Меркурий 201.7, 201.9"],[5000,"Меркурий 230 ART-00, 201.8"],[8000,"Меркурий 230 AM-00"]].forEach(function(m){var b=document.createElement("button");b.type="button";b.textContent=fmt(m[0],0);
+ b.addEventListener("click",function(){$("a").value=m[0];$("e0").textContent="";live();$("amodel").textContent=m[1]+". Сверьте с щитком счётчика."});$("achips").appendChild(b)});
+live();render();
+})();
+</script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "id": "./index.html",
+  "name": "Время индикации счётчика",
+  "short_name": "Счётчик",
+  "description": "Расчёт времени индикации и мощности по импульсам электросчётчика, векторная диаграмма",
+  "lang": "ru",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12263a",
+  "theme_color": "#12263a",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
